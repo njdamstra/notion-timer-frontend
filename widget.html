@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Notion Timer Widget</title>
+  <style>
+    body { font-family: sans-serif; text-align: center; margin-top: 50px; }
+    h1 { font-size: 50px; }
+  </style>
+</head>
+<body>
+  <h1 id="timer">Loading...</h1>
+  <script>
+    async function updateTimer() {
+      const res = await fetch('https://1234abcd.ngrok.io/status');
+      const data = await res.json();
+      const mins = Math.floor(data.elapsed / 60);
+      const secs = data.elapsed % 60;
+      document.getElementById('timer').innerText = `${mins}m ${secs}s`;
+    }
+    setInterval(updateTimer, 1000);
+    updateTimer();
+  </script>
+</body>
+</html>
