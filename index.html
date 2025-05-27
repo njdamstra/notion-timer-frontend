@@ -12,7 +12,7 @@
   <script>
     async function updateTimer() {
       try {
-        const res = await fetch('https://c73a-38-44-196-71.ngrok-free.app/status');
+        const res = await fetch('https://notion-timer-backend.fly.dev/status');
         const contentType = res.headers.get('content-type');
         if (!contentType || !contentType.includes('application/json')) {
           console.error('Non-JSON response:', await res.text());
