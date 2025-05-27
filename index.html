@@ -1,33 +1,409 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Notion Timer Widget</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
-    body { font-family: sans-serif; text-align: center; margin-top: 50px; }
-    h1 { font-size: 50px; }
+    :root {
+      --primary: #2E75CC;
+      --primary-dark: #1E5DA6;
+      --secondary: #37352F;
+      --accent: #F2F1F0;
+      --danger: #E03E3E;
+      --success: #0F7B0F;
+      --gray: #E9E9E8;
+      --radius: 4px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      color: var(--secondary);
+      background-color: #FFFFFF;
+      line-height: 1.6;
+      padding: 2rem;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    .container {
+      background: #FFFFFF;
+      border-radius: 8px;
+      box-shadow: rgba(15, 15, 15, 0.1) 0px 0px 0px 1px, rgba(15, 15, 15, 0.1) 0px 2px 4px;
+      padding: 2rem;
+    }
+
+    h1 {
+      font-size: 1.5rem;
+      font-weight: 600;
+      margin-bottom: 1.5rem;
+      text-align: center;
+    }
+
+    .timer-display {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 2rem;
+    }
+
+    #timer {
+      font-size: 3.5rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+    }
+
+    .timer-limit {
+      font-size: 1rem;
+      color: #6B6B6B;
+      margin-bottom: 0.75rem;
+      font-weight: 500;
+    }
+
+    .timer-info {
+      display: flex;
+      gap: 1rem;
+      font-size: 0.875rem;
+      color: #6B6B6B;
+    }
+
+    .status-badge {
+      display: inline-block;
+      padding: 0.25rem 0.5rem;
+      border-radius: 3px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .status-badge.running {
+      background: #E6F2FF;
+      color: var(--primary);
+    }
+
+    .status-badge.paused {
+      background: #F1F1F0;
+      color: #6B6B6B;
+    }
+
+    .status-badge.up {
+      background: #E6F7EE;
+      color: var(--success);
+    }
+
+    .status-badge.down {
+      background: #FCE8E8;
+      color: var(--danger);
+    }
+
+    .controls {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .control-group {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    @media (max-width: 500px) {
+      .control-group {
+        flex-direction: column;
+      }
+    }
+
+    .control-group button {
+      flex: 1;
+    }
+
+    button {
+      background-color: var(--gray);
+      border: none;
+      padding: 0.5rem 1rem;
+      border-radius: var(--radius);
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-family: 'Inter', sans-serif;
+    }
+
+    button:hover {
+      opacity: 0.9;
+    }
+
+    button.primary {
+      background-color: var(--primary);
+      color: white;
+    }
+
+    button.danger {
+      background-color: var(--danger);
+      color: white;
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .limit-input {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 1rem;
+    }
+
+    input {
+      padding: 0.5rem;
+      border: 1px solid var(--gray);
+      border-radius: var(--radius);
+      flex: 1;
+      font-family: 'Inter', sans-serif;
+    }
+
+    .limit-input button {
+      white-space: nowrap;
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: var(--secondary);
+      color: white;
+      padding: 0.75rem 1.5rem;
+      border-radius: var(--radius);
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    .toast.show {
+      opacity: 1;
+    }
   </style>
 </head>
 <body>
-  <h1 id="timer">Loading...</h1>
+  <div class="container">
+    <h1>Notion Timer Widget</h1>
+    
+    <div class="timer-display">
+      <div id="timer">00m 00s</div>
+      <div id="timer-limit" class="timer-limit"></div>
+      <div class="timer-info">
+        <div>
+          Status: <span id="status-badge" class="status-badge">Waiting</span>
+        </div>
+        <div>
+          Mode: <span id="mode-badge" class="status-badge">Up</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="controls">
+      <div class="control-group">
+        <button id="btn-start" class="primary">Start</button>
+        <button id="btn-pause" disabled>Pause</button>
+        <button id="btn-resume" disabled>Resume</button>
+        <button id="btn-reset" disabled class="danger">Reset</button>
+      </div>
+
+      <div class="limit-input">
+        <input type="number" id="limit-input" placeholder="Time limit (seconds)" min="1">
+        <button id="btn-start-limit">Start with Limit</button>
+        <button id="btn-start-descending">Start Countdown</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
   <script>
-    async function updateTimer() {
+    // DOM Elements
+    const timerEl = document.getElementById('timer');
+    const timerLimitEl = document.getElementById('timer-limit');
+    const statusBadgeEl = document.getElementById('status-badge');
+    const modeBadgeEl = document.getElementById('mode-badge');
+    const btnStart = document.getElementById('btn-start');
+    const btnPause = document.getElementById('btn-pause');
+    const btnResume = document.getElementById('btn-resume');
+    const btnReset = document.getElementById('btn-reset');
+    const limitInput = document.getElementById('limit-input');
+    const btnStartLimit = document.getElementById('btn-start-limit');
+    const btnStartDescending = document.getElementById('btn-start-descending');
+    const toastEl = document.getElementById('toast');
+
+    // API URL
+    const API_URL = 'https://notion-timer-backend.fly.dev';
+
+    // State
+    let timerState = {
+      running: false,
+      mode: 'up',
+      elapsed: 0,
+      limit: null,
+      remaining: null,
+    };
+
+    // Format time as MM:SS
+    function formatTime(seconds) {
+      const mins = Math.floor(seconds / 60);
+      const secs = seconds % 60;
+      return `${mins.toString().padStart(2, '0')}m ${secs.toString().padStart(2, '0')}s`;
+    }
+
+    // Show a toast message
+    function showToast(message, duration = 3000) {
+      toastEl.textContent = message;
+      toastEl.classList.add('show');
+      setTimeout(() => {
+        toastEl.classList.remove('show');
+      }, duration);
+    }
+
+    // Update UI based on timer state
+    function updateUI() {
+      // Update timer display
+      if (timerState.mode === 'down' && timerState.remaining !== null) {
+        // For countdown mode, show only the remaining time in the main display
+        timerEl.textContent = formatTime(timerState.remaining);
+        // Show total time below
+        timerLimitEl.textContent = `Total: ${formatTime(timerState.limit)}`;
+      } else if (timerState.mode === 'up' && timerState.limit !== null) {
+        // For up with limit mode, show only the elapsed time in the main display
+        timerEl.textContent = formatTime(timerState.elapsed);
+        // Show total time below
+        const remaining = Math.max(timerState.limit - timerState.elapsed, 0);
+        if (remaining > 0) {
+          timerLimitEl.textContent = `Total: ${formatTime(timerState.limit)}`;
+        } else {
+          timerLimitEl.textContent = 'Complete!';
+        }
+      } else {
+        // For regular up mode, just show the elapsed time
+        timerEl.textContent = formatTime(timerState.elapsed);
+        timerLimitEl.textContent = '';
+      }
+
+      // Update status badge
+      statusBadgeEl.textContent = timerState.running ? 'Running' : 'Paused';
+      statusBadgeEl.classList.remove('running', 'paused');
+      statusBadgeEl.classList.add(timerState.running ? 'running' : 'paused');
+
+      // Update mode badge
+      modeBadgeEl.textContent = timerState.mode === 'up' ? 'Up' : 'Down';
+      modeBadgeEl.classList.remove('up', 'down');
+      modeBadgeEl.classList.add(timerState.mode);
+
+      // Update button states
+      btnStart.disabled = timerState.running;
+      btnPause.disabled = !timerState.running;
+      btnResume.disabled = timerState.running || timerState.elapsed === 0;
+      btnReset.disabled = timerState.elapsed === 0 && 
+        (timerState.mode === 'down' ? timerState.remaining === timerState.limit : true);
+      btnStartLimit.disabled = timerState.running;
+      btnStartDescending.disabled = timerState.running;
+    }
+
+    // Fetch timer status from the backend
+    async function fetchTimerStatus() {
       try {
-        const res = await fetch('https://notion-timer-backend.fly.dev/status');
+        const res = await fetch(`${API_URL}/status`);
+        if (!res.ok) {
+          throw new Error(`Server responded with status: ${res.status}`);
+        }
+        
         const contentType = res.headers.get('content-type');
         if (!contentType || !contentType.includes('application/json')) {
           console.error('Non-JSON response:', await res.text());
           return;
         }
+        
         const data = await res.json();
-        const mins = Math.floor(data.elapsed / 60);
-        const secs = data.elapsed % 60;
-        document.getElementById('timer').innerText = `${mins}m ${secs}s`;
+        timerState = {
+          running: data.running,
+          mode: data.mode,
+          elapsed: data.elapsed,
+          limit: data.limit,
+          remaining: data.remaining
+        };
+        
+        updateUI();
       } catch (error) {
         console.error('Fetch error:', error);
+        showToast('Failed to connect to the server');
       }
     }
-    setInterval(updateTimer, 1000);
-    updateTimer();
+
+    // Send control command to the backend
+    async function sendControl(action, limit = null) {
+      try {
+        const payload = { action };
+        if (limit !== null) payload.limit = limit;
+
+        const res = await fetch(`${API_URL}/control`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        if (!res.ok) {
+          const errorText = await res.text();
+          throw new Error(errorText || `Server responded with status: ${res.status}`);
+        }
+
+        const data = await res.json();
+        if (data.status === 'ok') {
+          timerState = data.state;
+          updateUI();
+          return true;
+        } else {
+          throw new Error(data.error || 'Unknown error');
+        }
+      } catch (error) {
+        console.error('Control error:', error);
+        showToast(`Error: ${error.message}`);
+        return false;
+      }
+    }
+
+    // Event Listeners
+    btnStart.addEventListener('click', () => sendControl('start'));
+    btnPause.addEventListener('click', () => sendControl('pause'));
+    btnResume.addEventListener('click', () => sendControl('resume'));
+    btnReset.addEventListener('click', () => sendControl('reset'));
+
+    btnStartLimit.addEventListener('click', () => {
+      const limit = parseInt(limitInput.value);
+      if (isNaN(limit) || limit <= 0) {
+        showToast('Please enter a valid time limit');
+        return;
+      }
+      sendControl('startLimit', limit);
+    });
+
+    btnStartDescending.addEventListener('click', () => {
+      const limit = parseInt(limitInput.value);
+      if (isNaN(limit) || limit <= 0) {
+        showToast('Please enter a valid time limit');
+        return;
+      }
+      sendControl('startDescending', limit);
+    });
+
+    // Initialize
+    fetchTimerStatus();
+    setInterval(fetchTimerStatus, 1000);
   </script>
 </body>
 </html>
