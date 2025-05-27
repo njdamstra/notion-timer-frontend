@@ -41,6 +41,41 @@
       box-shadow: rgba(15, 15, 15, 0.1) 0px 0px 0px 1px, rgba(15, 15, 15, 0.1) 0px 2px 4px;
       padding: 2rem;
     }
+    
+    .tabs {
+      display: flex;
+      border-bottom: 1px solid var(--gray);
+      margin-bottom: 2rem;
+    }
+    
+    .tab {
+      padding: 0.5rem 1rem;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      font-weight: 500;
+      transition: all 0.2s ease;
+    }
+    
+    .tab.active {
+      border-bottom: 2px solid var(--primary);
+      color: var(--primary);
+    }
+    
+    .tab-content {
+      display: none;
+    }
+    
+    .tab-content.active {
+      display: block;
+    }
+    
+    .timer-only-view {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 70vh;
+    }
 
     h1 {
       font-size: 1.5rem;
@@ -57,14 +92,14 @@
       margin-bottom: 2rem;
     }
 
-    #timer {
-      font-size: 3.5rem;
+    #timer-full {
+      font-size: 4.5rem;
       font-weight: 700;
       margin-bottom: 0.5rem;
     }
 
     .timer-limit {
-      font-size: 1rem;
+      font-size: 1.25rem;
       color: #6B6B6B;
       margin-bottom: 0.75rem;
       font-weight: 500;
@@ -195,33 +230,46 @@
 </head>
 <body>
   <div class="container">
-    <h1>Notion Timer Widget</h1>
     
-    <div class="timer-display">
-      <div id="timer">00m 00s</div>
-      <div id="timer-limit" class="timer-limit"></div>
-      <div class="timer-info">
-        <div>
-          Status: <span id="status-badge" class="status-badge">Waiting</span>
+    <div class="tabs">
+      <div class="tab active" data-tab="full-view">Full View</div>
+      <div class="tab" data-tab="timer-only">Timer Only</div>
+    </div>
+    
+    <div id="full-view" class="tab-content active">
+      <div class="timer-display">
+        <div id="timer-full">00m 00s</div>
+        <div id="timer-limit-full" class="timer-limit"></div>
+        <div class="timer-info">
+          <div>
+            Status: <span id="status-badge" class="status-badge">Waiting</span>
+          </div>
+          <div>
+            Mode: <span id="mode-badge" class="status-badge">Up</span>
+          </div>
         </div>
-        <div>
-          Mode: <span id="mode-badge" class="status-badge">Up</span>
+      </div>
+
+      <div class="controls">
+        <div class="control-group">
+          <button id="btn-start" class="primary">Start</button>
+          <button id="btn-pause" disabled>Pause</button>
+          <button id="btn-resume" disabled>Resume</button>
+          <button id="btn-reset" disabled class="danger">Reset</button>
+        </div>
+
+        <div class="limit-input">
+          <input type="number" id="limit-input" placeholder="Time limit (seconds)" min="1">
+          <button id="btn-start-limit">Start with Limit</button>
+          <button id="btn-start-descending">Start Countdown</button>
         </div>
       </div>
     </div>
-
-    <div class="controls">
-      <div class="control-group">
-        <button id="btn-start" class="primary">Start</button>
-        <button id="btn-pause" disabled>Pause</button>
-        <button id="btn-resume" disabled>Resume</button>
-        <button id="btn-reset" disabled class="danger">Reset</button>
-      </div>
-
-      <div class="limit-input">
-        <input type="number" id="limit-input" placeholder="Time limit (seconds)" min="1">
-        <button id="btn-start-limit">Start with Limit</button>
-        <button id="btn-start-descending">Start Countdown</button>
+    
+    <div id="timer-only" class="tab-content">
+      <div class="timer-only-view">
+        <div id="timer-simple" style="font-size: 5rem; font-weight: 700;">00m 00s</div>
+        <div id="timer-limit-simple" class="timer-limit" style="font-size: 1.25rem;"></div>
       </div>
     </div>
   </div>
@@ -230,10 +278,16 @@
 
   <script>
     // DOM Elements
-    const timerEl = document.getElementById('timer');
-    const timerLimitEl = document.getElementById('timer-limit');
+    const timerFullEl = document.getElementById('timer-full');
+    const timerLimitFullEl = document.getElementById('timer-limit-full');
+    const timerSimpleEl = document.getElementById('timer-simple');
+    const timerLimitSimpleEl = document.getElementById('timer-limit-simple');
     const statusBadgeEl = document.getElementById('status-badge');
     const modeBadgeEl = document.getElementById('mode-badge');
+    
+    // Tab elements
+    const tabs = document.querySelectorAll('.tab');
+    const tabContents = document.querySelectorAll('.tab-content');
     const btnStart = document.getElementById('btn-start');
     const btnPause = document.getElementById('btn-pause');
     const btnResume = document.getElementById('btn-resume');
@@ -271,29 +325,51 @@
       }, duration);
     }
 
+    // Tab switching
+    tabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        // Remove active class from all tabs and contents
+        tabs.forEach(t => t.classList.remove('active'));
+        tabContents.forEach(c => c.classList.remove('active'));
+        
+        // Add active class to current tab and content
+        tab.classList.add('active');
+        const tabId = tab.getAttribute('data-tab');
+        document.getElementById(tabId).classList.add('active');
+      });
+    });
+    
     // Update UI based on timer state
     function updateUI() {
-      // Update timer display
+      // Timer text to display
+      let timerText, limitText;
+      
       if (timerState.mode === 'down' && timerState.remaining !== null) {
         // For countdown mode, show only the remaining time in the main display
-        timerEl.textContent = formatTime(timerState.remaining);
+        timerText = formatTime(timerState.remaining);
         // Show total time below
-        timerLimitEl.textContent = `Total: ${formatTime(timerState.limit)}`;
+        limitText = `Total: ${formatTime(timerState.limit)}`;
       } else if (timerState.mode === 'up' && timerState.limit !== null) {
         // For up with limit mode, show only the elapsed time in the main display
-        timerEl.textContent = formatTime(timerState.elapsed);
+        timerText = formatTime(timerState.elapsed);
         // Show total time below
         const remaining = Math.max(timerState.limit - timerState.elapsed, 0);
         if (remaining > 0) {
-          timerLimitEl.textContent = `Total: ${formatTime(timerState.limit)}`;
+          limitText = `Total: ${formatTime(timerState.limit)}`;
         } else {
-          timerLimitEl.textContent = 'Complete!';
+          limitText = 'Complete!';
         }
       } else {
         // For regular up mode, just show the elapsed time
-        timerEl.textContent = formatTime(timerState.elapsed);
-        timerLimitEl.textContent = '';
+        timerText = formatTime(timerState.elapsed);
+        limitText = '';
       }
+      
+      // Update both timer displays
+      timerFullEl.textContent = timerText;
+      timerSimpleEl.textContent = timerText;
+      timerLimitFullEl.textContent = limitText;
+      timerLimitSimpleEl.textContent = limitText;
 
       // Update status badge
       statusBadgeEl.textContent = timerState.running ? 'Running' : 'Paused';
