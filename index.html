@@ -11,11 +11,20 @@
   <h1 id="timer">Loading...</h1>
   <script>
     async function updateTimer() {
-      const res = await fetch('https://c73a-38-44-196-71.ngrok-free.app/status');
-      const data = await res.json();
-      const mins = Math.floor(data.elapsed / 60);
-      const secs = data.elapsed % 60;
-      document.getElementById('timer').innerText = `${mins}m ${secs}s`;
+      try {
+        const res = await fetch('https://c73a-38-44-196-71.ngrok-free.app/status');
+        const contentType = res.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+          console.error('Non-JSON response:', await res.text());
+          return;
+        }
+        const data = await res.json();
+        const mins = Math.floor(data.elapsed / 60);
+        const secs = data.elapsed % 60;
+        document.getElementById('timer').innerText = `${mins}m ${secs}s`;
+      } catch (error) {
+        console.error('Fetch error:', error);
+      }
     }
     setInterval(updateTimer, 1000);
     updateTimer();
